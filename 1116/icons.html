@@ -1,0 +1,47 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Answer Icons 11/16</title>
+<style>
+  @page { size: letter landscape; margin: 0.3in; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #fff; color: #000; font-family: Arial, Helvetica, sans-serif; }
+  .bar { padding: 12px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: #eee; }
+  .bar button, .bar a { font-size: 20px; padding: 10px 18px; border: 2px solid #000; border-radius: 10px; background: #ffd400; color: #000; text-decoration: none; cursor: pointer; }
+  .sheet { width: 10.2in; height: 7.5in; margin: 16px auto; display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 0.15in; }
+  .card { border: 5px solid #000; border-radius: 0.2in; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; padding: 0.1in; break-inside: avoid; overflow: hidden; }
+  .emo { font-size: 1.4in; line-height: 1; white-space: nowrap; }
+  .emo.two { font-size: 1in; }
+  .word { white-space: nowrap; font-size: 0.48in; font-weight: 700; line-height: 1.05; margin-top: 0.08in; }
+  .q { font-size: 0.16in; color: #444; margin-top: 0.06in; }
+  @media screen and (max-width: 10.8in) { .sheet { width: auto; height: auto; margin: 16px; grid-template-columns: repeat(2, 1fr); } .card { min-height: 3in; } }
+  @media print {
+    .bar { display: none; }
+    html, body { height: auto; }
+    .sheet { margin: 0; width: 10.2in; height: 7.5in; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="bar">
+  <button onclick="print()">🖨 Print</button>
+  <a href="./">← Back to lesson</a>
+  <span>Letter, landscape. Cut apart on the lines.</span>
+</div>
+<div class="sheet">
+  <div class="card"><div class="emo">💧</div><div class="word">water</div><div class="q">Warm-up</div></div>
+  <div class="card"><div class="emo">🏠</div><div class="word">house</div><div class="q">Warm-up</div></div>
+  <div class="card"><div class="emo">🚰</div><div class="word">plumbing</div><div class="q">Q1</div></div>
+  <div class="card"><div class="emo">🎭</div><div class="word">theater</div><div class="q">Q1</div></div>
+  <div class="card"><div class="emo">🌊</div><div class="word">lake</div><div class="q">Q2</div></div>
+  <div class="card"><div class="emo">🏘️</div><div class="word">houses</div><div class="q">Q2</div></div>
+  <div class="card"><div class="emo two">➡️💧</div><div class="word">to move it</div><div class="q">Q3</div></div>
+  <div class="card"><div class="emo">🪑</div><div class="word">to sit in</div><div class="q">Q3</div></div>
+</div>
+</body>
+</html>
