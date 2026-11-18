@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Water Far from the City</title>
+<style>
+  :root { --bg:#000; --fg:#fff; --hi:#ffd400; --ok:#2ecc40; --card:#1a1a1a; --water:#3fa9ff; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg);
+    font-family: "Atkinson Hyperlegible", Arial, Helvetica, sans-serif; }
+  body { display:flex; flex-direction:column; }
+  header { display:flex; align-items:center; justify-content:space-between; padding:8px 16px; font-size:18px; color:#aaa; }
+  #gear { background:none; border:1px solid #444; color:#aaa; font-size:16px; padding:6px 12px; border-radius:8px; cursor:pointer; }
+  main { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:8px 16px 24px; gap:20px; text-align:center; }
+  h1 { font-size:clamp(28px,6vw,60px); margin:0; line-height:1.15; }
+  .pic { font-size:clamp(70px,16vw,160px); line-height:1; }
+  .row { display:flex; gap:24px; flex-wrap:wrap; justify-content:center; width:100%; }
+  .scan { background:var(--card); color:var(--fg); border:6px solid #555; border-radius:24px;
+    font:inherit; font-size:clamp(26px,5vw,48px); font-weight:700; padding:20px 28px; min-width:min(42vw,340px);
+    cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .scan .pic { font-size:clamp(64px,13vw,130px); }
+  .scan.hl { border-color:var(--hi); box-shadow:0 0 0 8px var(--hi); transform:scale(1.04); }
+  .scan.right { border-color:var(--ok); background:#0b3d14; }
+  .scan.next { min-width:auto; font-size:clamp(22px,4vw,36px); }
+  .small { font-size:clamp(18px,3vw,26px); color:#ccc; margin:0; }
+  #fb { min-height:1.3em; font-size:clamp(24px,5vw,44px); font-weight:700; color:var(--ok); margin:0; }
+  svg { width:min(92vw,620px); height:auto; }
+  #settings { position:fixed; inset:auto 16px 16px auto; background:#222; border:2px solid #666; border-radius:12px;
+    padding:16px; font-size:18px; display:none; max-width:calc(100vw - 32px); z-index:5; text-align:left; }
+  #settings.open { display:block; }
+  #settings label { display:block; margin:8px 0; }
+  #settings select, #settings input { font-size:18px; }
+  table { border-collapse:collapse; font-size:clamp(18px,3vw,26px); }
+  td,th { border:1px solid #555; padding:6px 12px; }
+</style>
+</head>
+<body>
+<header>
+  <span>Week of Nov 16 · Wednesday · ULS Unit 3, Lesson 9</span>
+  <button id="gear" aria-label="Teacher settings">⚙ Teacher</button>
+</header>
+<main id="app" aria-live="polite"></main>
+
+<div id="settings" role="dialog" aria-label="Teacher settings">
+  <strong>Access mode</strong>
+  <label><input type="radio" name="mode" value="touch"> Touch / eye gaze / mouse</label>
+  <label><input type="radio" name="mode" value="auto"> 1 switch — auto scan (any switch = choose)</label>
+  <label><input type="radio" name="mode" value="step"> 2 switches — Space = move, Enter = choose</label>
+  <label>Scan speed
+    <select id="speed"><option value="1500">Fast (1.5 s)</option><option value="2500">Medium (2.5 s)</option><option value="4000">Slow (4 s)</option><option value="6000">Very slow (6 s)</option></select>
+  </label>
+  <label><input type="checkbox" id="voice"> Read choices aloud while scanning</label>
+  <button id="close" class="scan next" style="font-size:20px;padding:8px 16px">Close</button>
+</div>
+
+<script>
+// ---------- settings ----------
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('uls1116_' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('uls1116_' + k, JSON.stringify(v)); } catch {} }
+};
+let mode = store.get('mode', 'touch'), speed = store.get('speed', 2500), voiceOn = store.get('voice', true);
+
+// ---------- speech ----------
+function say(text, then) {
+  if (!('speechSynthesis' in window)) { then && setTimeout(then, 800); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.85;
+  if (then) { let done = false; const fin = () => { if (!done) { done = true; then(); } };
+    u.onend = fin; setTimeout(fin, Math.min(6000, 1200 + text.length * 70)); }
+  speechSynthesis.speak(u);
+}
+
+// ---------- scanning ----------
+let hi = -1, timer = null, locked = false;
+const items = () => [...document.querySelectorAll('#app .scan')];
+function paint() { items().forEach((b, i) => b.classList.toggle('hl', i === hi)); }
+function move() {
+  const list = items(); if (!list.length) return;
+  hi = (hi + 1) % list.length; paint();
+  if (voiceOn && mode !== 'touch') say(list[hi].dataset.say || list[hi].textContent.trim());
+}
+function stopScan() { clearInterval(timer); timer = null; hi = -1; paint(); }
+function startScan() {
+  stopScan();
+  if (mode === 'touch') return;
+  hi = 0; paint();
+  if (mode === 'step') return;
+  if (voiceOn) say(items()[0]?.dataset.say || '');
+  if (mode === 'auto') timer = setInterval(move, speed);
+}
+function choose() {
+  const list = items();
+  if (hi < 0 || !list[hi]) { if (mode === 'step') move(); return; }
+  list[hi].click();
+}
+function lock() { locked = true; setTimeout(() => locked = false, 450); }
+
+document.addEventListener('keydown', e => {
+  if (document.getElementById('settings').classList.contains('open')) return;
+  if (e.repeat || locked) { e.preventDefault(); return; }
+  const k = e.key;
+  if (mode === 'step') {
+    if (k === ' ' || k === '1' || k === 'ArrowRight' || k === 'Tab') { e.preventDefault(); lock(); move(); }
+    else if (k === 'Enter' || k === '2') { e.preventDefault(); lock(); choose(); }
+  } else if (mode === 'auto') {
+    if ([' ', 'Enter', '1', '2'].includes(k)) { e.preventDefault(); lock(); choose(); }
+  }
+});
+// Switch interfaces that act as a mouse click: in auto mode a click anywhere chooses.
+document.addEventListener('pointerdown', e => {
+  if (mode !== 'auto' || e.target.closest('#settings,#gear')) return;
+  e.preventDefault(); if (!locked) { lock(); choose(); }
+}, true);
+document.addEventListener('click', e => {
+  if (mode === 'auto' && !e.target.closest('#settings,#gear') && e.isTrusted) { e.stopPropagation(); e.preventDefault(); }
+}, true);
+
+// ---------- lesson ----------
+const app = document.getElementById('app');
+const log = [];
+const shuffle = a => a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(v => v[1]);
+
+function screen(html, prompt, buttons) {
+  stopScan();
+  app.innerHTML = html;
+  const row = document.createElement('div'); row.className = 'row';
+  buttons.forEach(b => {
+    const el = document.createElement('button');
+    el.className = 'scan' + (b.next ? ' next' : '');
+    el.dataset.say = b.say || b.label;
+    el.innerHTML = (b.pic ? `<span class="pic" aria-hidden="true">${b.pic}</span>` : '') + `<span>${b.label}</span>`;
+    el.addEventListener('click', () => b.go(el));
+    row.appendChild(el);
+  });
+  app.appendChild(row);
+  const fb = document.createElement('p'); fb.id = 'fb'; app.appendChild(fb);
+  if (mode === 'auto') say(prompt, startScan); else { say(prompt); startScan(); }
+}
+
+// Field-of-two question. Correct choice ends the trial; wrong choice is re-prompted (no rescue).
+function ask(id, q, pic, right, wrong, next) {
+  let tries = 0;
+  const opts = shuffle([{ ...right, ok: true }, { ...wrong, ok: false }]);
+  screen(`<div class="pic" aria-hidden="true">${pic}</div><h1>${q}</h1>`, q,
+    opts.map(o => ({ pic: o.pic, label: o.label, go: el => {
+      tries++;
+      const fb = document.getElementById('fb');
+      if (o.ok) {
+        log.push({ id, result: tries === 1 ? 'Correct' : `Correct on try ${tries}` });
+        el.classList.add('right'); stopScan();
+        fb.textContent = 'Yes! ' + o.label + '!';
+        say('Yes! ' + o.label + '.', () => setTimeout(next, 600));
+      } else {
+        fb.textContent = '';
+        if (mode === 'auto') { stopScan(); say('That is ' + o.label + '. ' + q, startScan); }
+        else say('That is ' + o.label + '. ' + q);
+      }
+    }})));
+}
+
+const pages = [
+  { n: 29, pic: '🏛️', text: 'Ancient Rome and the Aqueducts.' },
+  { n: 30, pic: '🔍', text: 'Dr. Jones points to a big tube. Lucie saw a pipe like it under her sink.' },
+  { n: 31, pic: '🚰', text: 'It is a pipe. Pipes carry water to homes.', step: true },
+  { n: 32, pic: '🏙️', text: 'Rome was very big. People needed clean water. Many cities were far from water.' },
+  { n: 33, pic: '🌉', text: 'The Romans built aqueducts. Aqueducts move water.', step: true },
+];
+
+function start() {
+  screen(`<div class="pic" aria-hidden="true">💧</div><h1>Water Far from the City</h1>
+    <p class="small">Chapter 4 · Ancient Rome and the Aqueducts</p>`,
+    'Water far from the city. Let’s start.',
+    [{ label: 'Start', pic: '▶️', go: warmup }]);
+}
+
+function warmup() {
+  ask('Warm-up: Show me water', 'Show me water.', '👀',
+    { label: 'water', pic: '💧' }, { label: 'house', pic: '🏠' }, () => page(0));
+}
+
+function page(i) {
+  const p = pages[i];
+  const btns = [];
+  if (p.step) btns.push({ label: 'Pipes move water.', pic: '🗣️', go: () => say('Pipes move water.') });
+  btns.push({ label: 'Read again', pic: '🔁', next: true, go: () => say(p.text) });
+  btns.push({ label: i < pages.length - 1 ? 'Next page' : 'Pour water', pic: '➡️', next: true,
+    go: () => i < pages.length - 1 ? page(i + 1) : pour() });
+  screen(`<p class="small">Page ${p.n}</p><div class="pic" aria-hidden="true">${p.pic}</div><h1>${p.text}</h1>`, p.text, btns);
+}
+
+// Aqueduct: a high cup pours down a sloped pipe into a clear cup.
+let fill = 0;
+function pour() {
+  fill = 0;
+  screen(`<h1>Pour the water!</h1>
+    <svg viewBox="0 0 620 360" role="img" aria-label="Water pours from a high cup down a pipe into a clear cup">
+      <rect x="20" y="20" width="110" height="90" rx="8" fill="#333" stroke="#fff" stroke-width="5"/>
+      <rect id="topw" x="25" y="45" width="100" height="60" fill="var(--water)"/>
+      <line x1="110" y1="110" x2="470" y2="250" stroke="#bbb" stroke-width="34" stroke-linecap="round"/>
+      <line x1="110" y1="110" x2="470" y2="250" stroke="#000" stroke-width="20" stroke-linecap="round"/>
+      <circle id="drop" r="11" fill="var(--water)" cx="110" cy="110" opacity="0"/>
+      <rect x="450" y="230" width="150" height="120" rx="8" fill="none" stroke="#fff" stroke-width="5"/>
+      <rect id="botw" x="455" y="345" width="140" height="0" fill="var(--water)"/>
+    </svg>`,
+    'Pour the water. Watch it move down the pipe.',
+    [{ label: 'Pour', pic: '🫗', go: doPour },
+     { label: 'Next', pic: '➡️', next: true, go: () => { log.push({ id: 'We Do: pour', result: fill ? `${fill} pour${fill > 1 ? 's' : ''}` : 'none' }); questions(0); } }]);
+}
+function doPour() {
+  const drop = document.getElementById('drop'); if (!drop || drop.dataset.busy) return;
+  drop.dataset.busy = 1; drop.setAttribute('opacity', 1);
+  const t0 = performance.now(), dur = 1800;
+  (function step() {
+    const k = Math.min(1, (performance.now() - t0) / dur);
+    drop.setAttribute('cx', 110 + 360 * k); drop.setAttribute('cy', 110 + 140 * k);
+    if (k < 1) return setTimeout(step, 30);
+    drop.setAttribute('opacity', 0); delete drop.dataset.busy;
+    fill = Math.min(fill + 1, 3);
+    const h = fill * 36, w = document.getElementById('botw');
+    w.setAttribute('height', h); w.setAttribute('y', 345 - h);
+    const th = Math.max(0, 60 - fill * 20), tw = document.getElementById('topw');
+    tw.setAttribute('height', th); tw.setAttribute('y', 105 - th);
+    document.getElementById('fb').textContent = 'The water moved!';
+    say('The water moved!');
+  })();
+  say('Pour!');
+}
+
+const qs = [
+  ['Q1', 'What is this chapter about?', '📖', { label: 'plumbing', pic: '🚰' }, { label: 'theater', pic: '🎭' }],
+  ['Q2', 'What were some cities in ancient Rome not close to?', '🏛️', { label: 'lake', pic: '🌊' }, { label: 'houses', pic: '🏠' }],
+  ['Q3', 'Why did people build channels for water?', '🌉', { label: 'to move it', pic: '➡️💧' }, { label: 'to sit in', pic: '🪑' }],
+];
+function questions(i) {
+  if (i >= qs.length) return done();
+  const [id, q, pic, r, w] = qs[i];
+  ask(id, q, pic, r, w, () => questions(i + 1));
+}
+
+function done() {
+  screen(`<div class="pic" aria-hidden="true">🎉</div><h1>Great work!</h1>
+    <table aria-label="Today's responses"><tr><th>Trial</th><th>Result</th></tr>
+    ${log.map(r => `<tr><td>${r.id}</td><td>${r.result}</td></tr>`).join('')}</table>
+    <p class="small">Record prompt level on your data sheet.</p>`,
+    'Great work!',
+    [{ label: 'Next student', pic: '🔁', go: () => { log.length = 0; start(); } }]);
+}
+
+// ---------- settings panel ----------
+const panel = document.getElementById('settings');
+document.querySelectorAll('input[name=mode]').forEach(r => {
+  r.checked = r.value === mode;
+  r.onchange = () => { mode = r.value; store.set('mode', mode); };
+});
+const sp = document.getElementById('speed'); sp.value = speed; sp.onchange = () => { speed = +sp.value; store.set('speed', speed); };
+const vc = document.getElementById('voice'); vc.checked = voiceOn; vc.onchange = () => { voiceOn = vc.checked; store.set('voice', voiceOn); };
+document.getElementById('gear').onclick = () => { stopScan(); panel.classList.add('open'); };
+document.getElementById('close').onclick = () => { panel.classList.remove('open'); startScan(); };
+
+start();
+</script>
+</body>
+</html>
