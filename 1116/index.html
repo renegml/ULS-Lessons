@@ -12,6 +12,7 @@
   body { display:flex; flex-direction:column; }
   header { display:flex; align-items:center; justify-content:space-between; padding:8px 16px; font-size:18px; color:#aaa; }
   #gear { background:none; border:1px solid #444; color:#aaa; font-size:16px; padding:6px 12px; border-radius:8px; cursor:pointer; }
+  #print { color:#aaa; font-size:16px; margin-right:12px; }
   main { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:8px 16px 24px; gap:20px; text-align:center; }
   h1 { font-size:clamp(28px,6vw,60px); margin:0; line-height:1.15; }
   .pic { font-size:clamp(70px,16vw,160px); line-height:1; }
@@ -38,7 +39,7 @@
 <body>
 <header>
   <span>Week of Nov 16 · Wednesday · ULS Unit 3, Lesson 9</span>
-  <button id="gear" aria-label="Teacher settings">⚙ Teacher</button>
+  <span><a id="print" href="icons.html">🖨 Printable icons</a> <button id="gear" aria-label="Teacher settings">⚙ Teacher</button></span>
 </header>
 <main id="app" aria-live="polite"></main>
 
@@ -111,11 +112,11 @@ document.addEventListener('keydown', e => {
 });
 // Switch interfaces that act as a mouse click: in auto mode a click anywhere chooses.
 document.addEventListener('pointerdown', e => {
-  if (mode !== 'auto' || e.target.closest('#settings,#gear')) return;
+  if (mode !== 'auto' || e.target.closest('#settings,#gear,#print')) return;
   e.preventDefault(); if (!locked) { lock(); choose(); }
 }, true);
 document.addEventListener('click', e => {
-  if (mode === 'auto' && !e.target.closest('#settings,#gear') && e.isTrusted) { e.stopPropagation(); e.preventDefault(); }
+  if (mode === 'auto' && !e.target.closest('#settings,#gear,#print') && e.isTrusted) { e.stopPropagation(); e.preventDefault(); }
 }, true);
 
 // ---------- lesson ----------
@@ -231,7 +232,7 @@ function doPour() {
 
 const qs = [
   ['Q1', 'What is this chapter about?', '📖', { label: 'plumbing', pic: '🚰' }, { label: 'theater', pic: '🎭' }],
-  ['Q2', 'What were some cities in ancient Rome not close to?', '🏛️', { label: 'lake', pic: '🌊' }, { label: 'houses', pic: '🏠' }],
+  ['Q2', 'What were some cities in ancient Rome not close to?', '🏛️', { label: 'lake', pic: '🌊' }, { label: 'houses', pic: '🏘️' }],
   ['Q3', 'Why did people build channels for water?', '🌉', { label: 'to move it', pic: '➡️💧' }, { label: 'to sit in', pic: '🪑' }],
 ];
 function questions(i) {
