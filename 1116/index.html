@@ -64,32 +64,40 @@ const store = {
 let mode = store.get('mode', 'touch'), speed = store.get('speed', 2500), voiceOn = store.get('voice', true);
 
 // ---------- speech ----------
+let sayId = 0;
 function say(text, then) {
-  if (!('speechSynthesis' in window)) { then && setTimeout(then, 800); return; }
+  const id = ++sayId; // a newer say() cancels the older one's callback
+  if (!('speechSynthesis' in window)) { then && setTimeout(() => id === sayId && then(), 800); return; }
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.rate = 0.85;
-  if (then) { let done = false; const fin = () => { if (!done) { done = true; then(); } };
+  if (then) { let done = false; const fin = () => { if (!done && id === sayId) { done = true; then(); } };
     u.onend = fin; setTimeout(fin, Math.min(6000, 1200 + text.length * 70)); }
   speechSynthesis.speak(u);
 }
 
 // ---------- scanning ----------
 let hi = -1, timer = null, locked = false;
+let cycles = 0, onCycles = null, forceSay = false; // auto-answer after 5 full scan cycles
 const items = () => [...document.querySelectorAll('#app .scan')];
 function paint() { items().forEach((b, i) => b.classList.toggle('hl', i === hi)); }
 function move() {
   const list = items(); if (!list.length) return;
-  hi = (hi + 1) % list.length; paint();
-  if (voiceOn && mode !== 'touch') say(list[hi].dataset.say || list[hi].textContent.trim());
+  const next = (hi + 1) % list.length;
+  if (mode === 'auto' && hi >= 0 && next === 0) {
+    cycles++;
+    if (onCycles && cycles >= 5) { const f = onCycles; onCycles = null; f(); return; }
+  }
+  hi = next; paint();
+  if ((voiceOn || forceSay) && mode !== 'touch') say(list[hi].dataset.say || list[hi].textContent.trim());
 }
 function stopScan() { clearInterval(timer); timer = null; hi = -1; paint(); }
 function startScan() {
   stopScan();
   if (mode === 'touch') return;
-  hi = 0; paint();
+  hi = 0; paint(); cycles = 0;
   if (mode === 'step') return;
-  if (voiceOn) say(items()[0]?.dataset.say || '');
+  if (voiceOn || forceSay) say(items()[0]?.dataset.say || '');
   if (mode === 'auto') timer = setInterval(move, speed);
 }
 function choose() {
@@ -125,7 +133,7 @@ const log = [];
 const shuffle = a => a.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(v => v[1]);
 
 function screen(html, prompt, buttons) {
-  stopScan();
+  stopScan(); onCycles = null; forceSay = false;
   app.innerHTML = html;
   const row = document.createElement('div'); row.className = 'row';
   buttons.forEach(b => {
@@ -155,11 +163,21 @@ function ask(id, q, pic, right, wrong, next) {
         fb.textContent = 'Yes! ' + o.label + '!';
         say('Yes! ' + o.label + '.', () => setTimeout(next, 600));
       } else {
+        // Wrong answer is removed; only the correct choice stays.
         fb.textContent = '';
-        if (mode === 'auto') { stopScan(); say('That is ' + o.label + '. ' + q, startScan); }
-        else say('That is ' + o.label + '. ' + q);
+        el.remove();
+        if (mode === 'auto') { stopScan(); forceSay = true; say('That is ' + o.label + '. ' + q, startScan); }
+        else { say('That is ' + o.label + '. ' + q); if (mode === 'step') { hi = 0; paint(); } }
       }
     }})));
+  // Auto-scan: no response after 5 full cycles → answer for the student.
+  onCycles = () => {
+    const el = [...document.querySelectorAll('#app .scan')].find(b => b.dataset.say === right.label);
+    log.push({ id, result: 'Auto-answered (no response)' });
+    stopScan(); if (el) el.classList.add('right');
+    document.getElementById('fb').textContent = 'The answer is ' + right.label + '.';
+    say('The answer is ' + right.label + '.', () => setTimeout(next, 600));
+  };
 }
 
 const pages = [
